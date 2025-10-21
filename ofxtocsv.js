@@ -28,12 +28,21 @@ function parseOFX(text) {
             amount: getTag('TRNAMT'),
             type: getTag('TRNTYPE'),
             name: getTag('NAME'),
+            party: getParty(getTag('FITID')),
             memo: getTag('MEMO'),
             checknum: getTag('CHECKNUM'),
-            fitid: getTag('FITID')
+            fitid: getTag('FITID'),
+            customId: `${formatOFXDate(getTag('DTPOSTED'))}_${getTag('TRNAMT')}_${getTag('CHECKNUM')}_${getTag('MEMO').replace(/[^a-z0-9]/gi, '')}`
         });
     }
     return txns;
+}
+
+// this function gets the party involved in the transaction form the memo. Based on the FITID
+function getParty(memo) {
+    let match = memo.match(/[^:]*$/)?.[0].trim();
+    const cleaned = match.replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, '').trim();
+    return cleaned;
 }
 
 function formatOFXDate(ofxDate) {
