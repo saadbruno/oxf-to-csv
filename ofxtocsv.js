@@ -2,11 +2,13 @@ const ofxInput = document.getElementById('ofxInput');
 const tableContainer = document.getElementById('tableContainer');
 const downloadBtn = document.getElementById('downloadBtn');
 let transactions = [];
+let fileName = `transactions`;
 
 ofxInput.addEventListener('change', async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
+    fileName = file.name.replace(/\.[^/.]+$/, ""); // stores filename so we can reuse it
     const text = await file.text();
     transactions = parseOFX(text);
     renderTable(transactions);
@@ -102,7 +104,7 @@ downloadBtn.addEventListener('click', () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'transactions.csv';
+    a.download = `${fileName}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 });
