@@ -1,42 +1,72 @@
 const ofxInput = document.getElementById('ofxInput');
 const tableContainer = document.getElementById('tableContainer');
+const transactionsCount = document.getElementById('transactionsCount');
 const downloadBtn = document.getElementById('downloadBtn');
 let transactions = [];
 let fileName = `transactions`;
 
 ofxInput.addEventListener('change', async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
 
-    fileName = file.name.replace(/\.[^/.]+$/, ""); // stores filename so we can reuse it
-    const text = await file.text();
-    transactions = parseOFX(text);
+    transactions = [];
+
+    for (const file of event.target.files) {
+        if (!file) continue;
+
+        console.log(`Parsing "${file.name}"...`);
+
+        fileName = file.name.replace(/\.[^/.]+$/, ""); // stores filename so we can reuse it
+        const text = await file.text();
+        const newTransactions = parseOFX(text);
+        if (!newTransactions.length) continue;
+
+        transactions.push(...newTransactions);
+
+    }
+
     renderTable(transactions);
+
     downloadBtn.style.display = transactions.length ? 'inline-block' : 'none';
 });
 
 function parseOFX(text) {
-    const txns = [];
-    const txnMatches = text.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/g);
-    if (!txnMatches) return txns;
+    const txns = []; // transactions array, already formatted
 
-    for (const txn of txnMatches) {
-        const getTag = (tag) => {
-            const match = txn.match(new RegExp(`<${tag}>([^<]+)`));
-            return match ? match[1].trim() : '';
-        };
-        txns.push({
-            date: formatOFXDate(getTag('DTPOSTED')),
-            amount: getTag('TRNAMT'),
-            type: getTag('TRNTYPE'),
-            name: getTag('NAME'),
-            party: getParty(getTag('FITID')),
-            memo: getTag('MEMO'),
-            checknum: getTag('CHECKNUM'),
-            fitid: getTag('FITID'),
-            customId: `${formatOFXDate(getTag('DTPOSTED'))}_${getTag('TRNAMT')}_${getTag('CHECKNUM')}_${getTag('MEMO').replace(/[^a-z0-9]/gi, '')}`
-        });
+    // each bank account in the statement produces a "statement response"
+    const stmtRes = text.match(/<STMTTRNRS>[\s\S]*?<\/STMTTRNRS>/g);
+
+    // let's loop each bank account
+    for (const stmt of stmtRes) {
+        // let's store the bank info for later use
+        const bankInfo = {};
+        bankInfo.bankId = getOFXTag(stmt, `BANKID`);
+        bankInfo.acctId = getOFXTag(stmt, `ACCTID`);
+        bankInfo.acctType = getOFXTag(stmt, `ACCTTYPE`);
+
+        console.log(`Parsing account ${bankInfo.acctId}`);
+
+        // now let's loop for each transaction in this bank account
+        const txnMatches = stmt.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/g); // all the transaction text matches so we can parse them later
+        if (!txnMatches) return txns;
+
+        for (const txn of txnMatches) {
+            txns.push({
+                bankId: bankInfo.bankId,
+                acctId: bankInfo.acctId,
+                acctType: bankInfo.acctType,
+                date: formatOFXDate(getOFXTag(txn, 'DTPOSTED')),
+                amount: getOFXTag(txn, 'TRNAMT'),
+                type: getOFXTag(txn, 'TRNTYPE'),
+                name: getOFXTag(txn, 'NAME'),
+                party: getParty(getOFXTag(txn, 'FITID')),
+                memo: getOFXTag(txn, 'MEMO'),
+                checknum: getOFXTag(txn, 'CHECKNUM'),
+                fitid: getOFXTag(txn, 'FITID'),
+                customId: `${formatOFXDate(getOFXTag(txn, 'DTPOSTED'))}_${getOFXTag(txn, 'TRNAMT')}_${getOFXTag(txn, 'CHECKNUM')}_${getOFXTag(txn, 'MEMO').replace(/[^a-z0-9]/gi, '')}`
+            });
+        }
+
     }
+
     return txns;
 }
 
@@ -46,6 +76,11 @@ function getParty(memo) {
     const cleaned = match.replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, '').trim();
     return cleaned;
 }
+
+function getOFXTag(ofx, tag) {
+    const match = ofx.match(new RegExp(`<${tag}>([^<]+)`));
+    return match ? match[1].trim() : '';
+};
 
 function formatOFXDate(ofxDate) {
     // Example: 20251010 or 20251010120000
@@ -89,6 +124,7 @@ function renderTable(data) {
     table.appendChild(tbody);
     tableContainer.innerHTML = '';
     tableContainer.appendChild(table);
+    transactionsCount.innerText = data.length;
 }
 
 downloadBtn.addEventListener('click', () => {

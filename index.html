@@ -9,8 +9,9 @@
 
 <body>
   <h1>OFX Transaction Viewer</h1>
-  <input type="file" id="ofxInput" accept=".ofx" />
+  <input type="file" id="ofxInput" accept=".ofx" multiple />
   <button id="downloadBtn">Download as CSV</button>
+  <div><span id="transactionsCount">0</span> transactions parsed</div>
   <div id="tableContainer"></div>
 
   <script src="ofxtocsv.js"></script>
