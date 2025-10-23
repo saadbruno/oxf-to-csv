@@ -46,7 +46,7 @@ function parseOFX(text) {
 
         // now let's loop for each transaction in this bank account
         const txnMatches = stmt.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/g); // all the transaction text matches so we can parse them later
-        if (!txnMatches) return txns;
+        if (!txnMatches) continue;
 
         for (const txn of txnMatches) {
             txns.push({
