@@ -61,7 +61,7 @@ function parseOFX(text) {
                 memo: getOFXTag(txn, 'MEMO'),
                 checknum: getOFXTag(txn, 'CHECKNUM'),
                 fitid: getOFXTag(txn, 'FITID'),
-                customId: `${formatOFXDate(getOFXTag(txn, 'DTPOSTED'))}_${getOFXTag(txn, 'TRNAMT')}_${getOFXTag(txn, 'CHECKNUM')}_${getOFXTag(txn, 'MEMO').replace(/[^a-z0-9]/gi, '')}`
+                customId: `${getOFXTag(txn, 'CHECKNUM')}_${formatOFXDate(getOFXTag(txn, 'DTPOSTED'))}_${getOFXTag(txn, 'TRNAMT')}`
             });
         }
 
